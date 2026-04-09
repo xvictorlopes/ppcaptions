@@ -4,16 +4,16 @@ from pathlib import Path
 import pysrt
 import whisper
 import whisper.transcribe
-import whisperx_ppcaptions_fork as whisperx
-from whisperx_ppcaptions_fork import alignment, asr, utils, audio
 import subtitle_utils
 from utils import time_task
 
 
 def transcribe_audio(model: whisper.model, audio_path: Path, srt_path: Path, lang: str = None, disable_fp16: bool = False):
+    from whisperx_ppcaptions_fork import alignment
+
     # Load audio
     audio = whisper.load_audio(file=audio_path.as_posix())
-    
+
     # Transcribe
     with time_task():
         transcribe = model.transcribe(audio=audio, language=lang, fp16=False if disable_fp16 else True, verbose=False)
