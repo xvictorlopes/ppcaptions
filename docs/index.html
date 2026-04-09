@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PU Prime Captions — AI-powered automatic subtitles</title>
+  <meta name="description"
+    content="Open-source automatic subtitle generation tool powered by Whisper, with translation and video burn-in." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Roboto', 'sans-serif'],
+            mono: ['Roboto Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+            surface: {
+              900: '#050508',
+              800: '#080a14',
+              700: '#0d1220',
+              600: '#111a30',
+              500: '#162040',
+            }
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.6s ease forwards',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(24px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #050508;
+      color: #f1f5f0;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .card-glass {
+      background: rgba(27, 35, 58, 0.7);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      backdrop-filter: blur(8px);
+    }
+
+    .card-glass:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: rgba(30, 44, 80, 0.85);
+    }
+
+    .step-line::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      width: 2px;
+      height: 2rem;
+      background: linear-gradient(to bottom, #3b82f6, transparent);
+      transform: translateX(-50%);
+    }
+
+    .pipeline-arrow {
+      color: #3b82f6;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    code,
+    pre {
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, padding 0.35s ease;
+    }
+
+    .accordion-body.open {
+      max-height: 600px;
+    }
+
+    .navbar-blur {
+      backdrop-filter: blur(12px);
+      background: rgba(6, 8, 5, 0.85);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #050508;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #1d4ed8;
+      border-radius: 3px;
+    }
+
+    .tab-btn.active {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .model-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+
+<body class="font-sans antialiased">
+
+  <!-- ============================================================ NAVBAR -->
+  <nav class="navbar-blur fixed top-0 left-0 right-0 z-50 border-b border-brand-900/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a href="#" class="flex items-center gap-2">
+          <span class="text-brand-400 font-mono font-bold text-xl">PU Prime</span><span
+            class="text-white font-bold text-xl">Captions</span>
+        </a>
+        <div class="hidden md:flex items-center gap-6 text-sm text-gray-400">
+          <a href="#how-it-works" class="hover:text-brand-400 transition-colors">How it works</a>
+          <a href="#models" class="hover:text-brand-400 transition-colors">Models</a>
+          <a href="#colab" class="hover:text-brand-400 transition-colors">Google Colab</a>
+          <a href="#tools" class="hover:text-brand-400 transition-colors">Tools</a>
+          <a href="#cli" class="hover:text-brand-400 transition-colors">CLI</a>
+          <a href="https://github.com/xvictorlopes/ppcaptions" target="_blank"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-700 hover:bg-brand-600 text-white transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.1.82-.26.82-.58l-.01-2.25c-3.34.72-4.04-1.42-4.04-1.42-.55-1.4-1.33-1.77-1.33-1.77-1.09-.74.08-.72.08-.72 1.2.08 1.84 1.23 1.84 1.23 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.13 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.69.83.57C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
+            </svg>
+            GitHub
+          </a>
+        </div>
+        <button id="menu-btn" class="md:hidden text-gray-400 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu"
+      class="hidden md:hidden border-t border-brand-900/50 px-4 py-3 space-y-2 text-sm text-gray-300">
+      <a href="#how-it-works" class="block py-1 hover:text-brand-400">How it works</a>
+      <a href="#models" class="block py-1 hover:text-brand-400">Models</a>
+      <a href="#colab" class="block py-1 hover:text-brand-400">Google Colab</a>
+      <a href="#tools" class="block py-1 hover:text-brand-400">Tools</a>
+      <a href="#cli" class="block py-1 hover:text-brand-400">CLI</a>
+      <a href="https://github.com/xvictorlopes/ppcaptions" target="_blank"
+        class="block py-1 hover:text-brand-400">GitHub</a>
+    </div>
+  </nav>
+
+  <!-- ============================================================ HERO -->
+  <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <!-- Background glow -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div
+        class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-brand-800/20 blur-3xl">
+      </div>
+    </div>
+
+    <div class="relative max-w-5xl mx-auto px-4 text-center">
+      <span
+        class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-brand-900/60 text-brand-300 border border-brand-700/40 mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse-slow"></span>
+        Open-source · GPLv3 · Powered by Whisper
+      </span>
+
+      <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight mb-6 leading-none">
+        <span class="gradient-text">PU Prime</span><br />
+        <span class="text-white">Captions</span>
+      </h1>
+
+      <p class="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        An AI-powered subtitle studio that runs on your machine or on Google Colab. Transcribes, translates,
+        and burns subtitles into videos using Whisper&nbsp;/&nbsp;WhisperX — fully automated.
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="https://colab.research.google.com/github/xvictorlopes/ppcaptions/blob/main/ppcaptions.ipynb"
+          target="_blank"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-all shadow-lg shadow-brand-900/40 hover:shadow-brand-800/60">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+          </svg>
+          Open in Google Colab
+        </a>
+        <a href="https://github.com/xvictorlopes/ppcaptions" target="_blank"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-surface-600 hover:bg-surface-500 text-white font-semibold border border-brand-800/50 hover:border-brand-600/60 transition-all">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38.6.1.82-.26.82-.58l-.01-2.25c-3.34.72-4.04-1.42-4.04-1.42-.55-1.4-1.33-1.77-1.33-1.77-1.09-.74.08-.72.08-.72 1.2.08 1.84 1.23 1.84 1.23 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.04.13 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.69.83.57C20.57 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          View on GitHub
+        </a>
+        <a href="#how-it-works"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-gray-400 hover:text-white transition-colors">
+          Learn more
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </a>
+      </div>
+
+      <!-- Feature pills -->
+      <div class="mt-16 flex flex-wrap justify-center gap-3 text-sm text-gray-500">
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">Automatic
+          transcription</span>
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">100+ languages</span>
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">Softsub &amp; Hardsub</span>
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">GPU / CPU</span>
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">yt-dlp built-in</span>
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">Docker</span>
+        <span class="px-3 py-1 rounded-full bg-surface-700/60 border border-surface-500/30">TLTW summary with
+          Gemini</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ HOW IT WORKS -->
+  <section id="how-it-works" class="py-24 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16 fade-in">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">How it works</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">PU Prime Captions runs a complete pipeline — from raw media to a fully
+          subtitled video — with no manual intervention.</p>
+      </div>
+
+      <!-- Pipeline -->
+      <div class="flex flex-col md:flex-row items-center justify-center gap-0 md:gap-0 fade-in">
+        <!-- Step 1 -->
+        <div class="flex flex-col items-center text-center md:flex-1 p-6">
+          <div
+            class="w-16 h-16 rounded-2xl bg-brand-900/60 border border-brand-700/40 flex items-center justify-center mb-4 text-2xl">
+            📥
+          </div>
+          <h3 class="font-semibold text-white mb-1">Input</h3>
+          <p class="text-xs text-gray-500">Local file, folder, or URL (YouTube, Twitch…)</p>
+        </div>
+        <div class="pipeline-arrow hidden md:block text-brand-600 text-3xl select-none">›</div>
+        <div class="pipeline-arrow md:hidden text-brand-600 text-3xl select-none rotate-90">›</div>
+
+        <!-- Step 2 -->
+        <div class="flex flex-col items-center text-center md:flex-1 p-6">
+          <div
+            class="w-16 h-16 rounded-2xl bg-brand-900/60 border border-brand-700/40 flex items-center justify-center mb-4 text-2xl">
+            🎙
+          </div>
+          <h3 class="font-semibold text-white mb-1">Transcription</h3>
+          <p class="text-xs text-gray-500">Whisper / WhisperX with voice activity detection (Silero or Pyannote VAD)</p>
+        </div>
+        <div class="pipeline-arrow hidden md:block text-brand-600 text-3xl select-none">›</div>
+        <div class="pipeline-arrow md:hidden text-brand-600 text-3xl select-none rotate-90">›</div>
+
+        <!-- Step 3 -->
+        <div class="flex flex-col items-center text-center md:flex-1 p-6">
+          <div
+            class="w-16 h-16 rounded-2xl bg-brand-900/60 border border-brand-700/40 flex items-center justify-center mb-4 text-2xl">
+            🌐
+          </div>
+          <h3 class="font-semibold text-white mb-1">Translation</h3>
+          <p class="text-xs text-gray-500">Google Translate or Gemini AI with context-aware chunking</p>
+        </div>
+        <div class="pipeline-arrow hidden md:block text-brand-600 text-3xl select-none">›</div>
+        <div class="pipeline-arrow md:hidden text-brand-600 text-3xl select-none rotate-90">›</div>
+
+        <!-- Step 4 -->
+        <div class="flex flex-col items-center text-center md:flex-1 p-6">
+          <div
+            class="w-16 h-16 rounded-2xl bg-brand-900/60 border border-brand-700/40 flex items-center justify-center mb-4 text-2xl">
+            🎬
+          </div>
+          <h3 class="font-semibold text-white mb-1">Export</h3>
+          <p class="text-xs text-gray-500">.srt, softsub (MP4 + subtitle track) and hardsub (burned-in captions)</p>
+        </div>
+      </div>
+
+      <!-- Feature cards -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-16">
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="text-brand-400 text-2xl mb-3">🎯</div>
+          <h3 class="font-semibold text-white mb-2">Word-level alignment</h3>
+          <p class="text-sm text-gray-400">WhisperX aligns every word to the exact moment it is spoken, producing
+            perfectly synchronized subtitles.</p>
+        </div>
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="text-brand-400 text-2xl mb-3">⚡</div>
+          <h3 class="font-semibold text-white mb-2">GPU acceleration</h3>
+          <p class="text-sm text-gray-400">Auto-detects CUDA, MPS, or CPU. Supports NVENC, VAAPI, AMF and other hardware
+            encoders via FFmpeg.</p>
+        </div>
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="text-brand-400 text-2xl mb-3">📦</div>
+          <h3 class="font-semibold text-white mb-2">Automatic download</h3>
+          <p class="text-sm text-gray-400">Pass a YouTube, Twitch, or any yt-dlp-supported URL directly. PU Prime
+            Captions downloads and processes it automatically.</p>
+        </div>
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="text-brand-400 text-2xl mb-3">🔤</div>
+          <h3 class="font-semibold text-white mb-2">Softsub &amp; Hardsub</h3>
+          <p class="text-sm text-gray-400">Outputs an MP4 with an embedded subtitle track (softsub, optional) and a
+            separate video with captions burned into the frames (hardsub).</p>
+        </div>
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="text-brand-400 text-2xl mb-3">📝</div>
+          <h3 class="font-semibold text-white mb-2">TLTW summary</h3>
+          <p class="text-sm text-gray-400">"Too Long To Watch" — generates a Markdown summary with title, tags, key
+            points, and timestamped chapters using Gemini AI.</p>
+        </div>
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="text-brand-400 text-2xl mb-3">🐳</div>
+          <h3 class="font-semibold text-white mb-2">Docker support</h3>
+          <p class="text-sm text-gray-400">Run inside an isolated container with GPU support (NVIDIA Container Toolkit).
+            No host dependencies beyond Docker itself.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ MODELS -->
+  <section id="models" class="py-24 px-4 bg-surface-800/30">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12 fade-in">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Transcription Models</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">PU Prime Captions uses OpenAI's Whisper models. Pick the right balance
+          between speed and accuracy.</p>
+      </div>
+
+      <div class="overflow-x-auto rounded-2xl border border-brand-900/50 fade-in">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-surface-700/80 text-gray-300 text-left">
+              <th class="px-5 py-4 font-semibold">Model</th>
+              <th class="px-5 py-4 font-semibold">Parameters</th>
+              <th class="px-5 py-4 font-semibold">VRAM</th>
+              <th class="px-5 py-4 font-semibold">Speed</th>
+              <th class="px-5 py-4 font-semibold">Quality</th>
+              <th class="px-5 py-4 font-semibold">Best for</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-600/40">
+            <tr class="bg-surface-800/40 hover:bg-surface-700/40 transition-colors">
+              <td class="px-5 py-4 font-mono text-gray-300">tiny</td>
+              <td class="px-5 py-4 text-gray-400">39 M</td>
+              <td class="px-5 py-4 text-gray-400">~1 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●●</span></td>
+              <td class="px-5 py-4"><span class="text-red-400">●○○○○</span></td>
+              <td class="px-5 py-4 text-gray-400">Quick tests</td>
+            </tr>
+            <tr class="bg-surface-800/40 hover:bg-surface-700/40 transition-colors">
+              <td class="px-5 py-4 font-mono text-gray-300">small</td>
+              <td class="px-5 py-4 text-gray-400">244 M</td>
+              <td class="px-5 py-4 text-gray-400">~2 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●</span><span class="text-gray-600">○</span></td>
+              <td class="px-5 py-4"><span class="text-yellow-400">●●○○○</span></td>
+              <td class="px-5 py-4 text-gray-400">Low VRAM machines</td>
+            </tr>
+            <tr class="bg-surface-800/40 hover:bg-surface-700/40 transition-colors">
+              <td class="px-5 py-4 font-mono text-gray-300">medium</td>
+              <td class="px-5 py-4 text-gray-400">769 M</td>
+              <td class="px-5 py-4 text-gray-400">~5 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●</span><span class="text-gray-600">○○</span></td>
+              <td class="px-5 py-4"><span class="text-yellow-400">●●●○○</span></td>
+              <td class="px-5 py-4 text-gray-400">General use</td>
+            </tr>
+            <tr class="bg-surface-800/40 hover:bg-surface-700/40 transition-colors">
+              <td class="px-5 py-4 font-mono text-gray-300">turbo</td>
+              <td class="px-5 py-4 text-gray-400">809 M</td>
+              <td class="px-5 py-4 text-gray-400">~6 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●</span><span class="text-gray-600">○</span></td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●</span><span class="text-gray-600">○</span></td>
+              <td class="px-5 py-4 text-gray-400">Great speed/quality tradeoff</td>
+            </tr>
+            <tr class="bg-surface-800/40 hover:bg-surface-700/40 transition-colors">
+              <td class="px-5 py-4 font-mono text-gray-300">large-v3</td>
+              <td class="px-5 py-4 text-gray-400">1.55 B</td>
+              <td class="px-5 py-4 text-gray-400">~10 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●</span><span class="text-gray-600">○○○</span></td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●</span><span class="text-gray-600">○</span></td>
+              <td class="px-5 py-4 text-gray-400">High accuracy</td>
+            </tr>
+            <tr class="bg-surface-700/60 hover:bg-surface-600/60 transition-colors">
+              <td class="px-5 py-4 font-mono text-brand-300 font-semibold">
+                large-v3-turbo
+                <span class="model-badge bg-brand-800/60 text-brand-300 ml-2">default</span>
+              </td>
+              <td class="px-5 py-4 text-gray-300">809 M</td>
+              <td class="px-5 py-4 text-gray-300">~6 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●</span><span class="text-gray-600">○</span></td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●●</span></td>
+              <td class="px-5 py-4 text-gray-300">Best accuracy + speed</td>
+            </tr>
+            <tr class="bg-surface-800/40 hover:bg-surface-700/40 transition-colors">
+              <td class="px-5 py-4 font-mono text-gray-300">distil-large-v3</td>
+              <td class="px-5 py-4 text-gray-400">756 M</td>
+              <td class="px-5 py-4 text-gray-400">~6 GB</td>
+              <td class="px-5 py-4"><span class="text-green-400">●●●●</span><span class="text-gray-600">○</span></td>
+              <td class="px-5 py-4"><span class="text-yellow-400">●●●○○</span></td>
+              <td class="px-5 py-4 text-gray-400">English, fast and lightweight</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-600 mt-3 text-center">VRAM estimated for float16. Actual usage depends on batch size
+        and audio length.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ COLAB -->
+  <section id="colab" class="py-24 px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12 fade-in">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Using on Google Colab</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">No GPU? Use Google's free infrastructure without installing anything
+          on your computer.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 items-start">
+        <!-- Steps -->
+        <ol class="space-y-6 fade-in">
+          <li class="flex gap-4">
+            <div
+              class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-sm font-bold text-white">
+              1</div>
+            <div>
+              <h4 class="font-semibold text-white mb-1">Open the Notebook</h4>
+              <p class="text-sm text-gray-400">Click the button below. The notebook will open directly in Google Colab
+                (a Google account is required).</p>
+            </div>
+          </li>
+          <li class="flex gap-4">
+            <div
+              class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-sm font-bold text-white">
+              2</div>
+            <div>
+              <h4 class="font-semibold text-white mb-1">Run the <em>Prepare</em> cell</h4>
+              <p class="text-sm text-gray-400">Installs PU Prime Captions, FFmpeg, fonts, and all dependencies. Mount
+                Google Drive to access your files.</p>
+            </div>
+          </li>
+          <li class="flex gap-4">
+            <div
+              class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-sm font-bold text-white">
+              3</div>
+            <div>
+              <h4 class="font-semibold text-white mb-1">Set options in the <em>Configure</em> cell</h4>
+              <p class="text-sm text-gray-400">Set the input folder, Whisper model, target language for translation,
+                video codec and other options — all through a visual form.</p>
+            </div>
+          </li>
+          <li class="flex gap-4">
+            <div
+              class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-sm font-bold text-white">
+              4</div>
+            <div>
+              <h4 class="font-semibold text-white mb-1">Run the <em>Run</em> cell</h4>
+              <p class="text-sm text-gray-400">Processing starts. Follow the live log. Generated files are saved
+                directly to your Google Drive.</p>
+            </div>
+          </li>
+        </ol>
+
+        <!-- Info card -->
+        <div class="space-y-4 fade-in">
+          <div class="card-glass rounded-2xl p-6">
+            <h4 class="font-semibold text-white mb-3 flex items-center gap-2">
+              <span class="text-yellow-400">⚠</span> Important tips
+            </h4>
+            <ul class="space-y-2 text-sm text-gray-400">
+              <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">›</span> Use the <strong
+                  class="text-gray-300">GPU T4</strong> runtime (free) for faster transcription.</li>
+              <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">›</span> Upload your videos to the
+                configured Google Drive folder before running.</li>
+              <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">›</span> You can pass a YouTube URL
+                directly in the <em>input_path</em> field.</li>
+              <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">›</span> To use Gemini
+                (translation/TLTW), get a free API key at <a href="https://aistudio.google.com/apikey" target="_blank"
+                  class="text-brand-400 hover:underline">aistudio.google.com</a>.</li>
+              <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">›</span> Free Colab sessions
+                disconnect after ~12 hours.</li>
+            </ul>
+          </div>
+
+          <a href="https://colab.research.google.com/github/xvictorlopes/ppcaptions/blob/main/ppcaptions.ipynb"
+            target="_blank"
+            class="flex items-center justify-center gap-3 w-full px-6 py-4 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-all shadow-lg shadow-brand-900/40 text-lg">
+            <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab" class="h-6" />
+            Open Notebook
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ TOOLS -->
+  <section id="tools" class="py-24 px-4 bg-surface-800/30">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-12 fade-in">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Third-party tools</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">PU Prime Captions integrates the best open-source tools in ML and
+          video processing.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Whisper -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">🔊</div>
+            <div>
+              <h3 class="font-semibold text-white">Whisper</h3>
+              <span class="text-xs text-gray-500">OpenAI</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Speech recognition (ASR) model trained on 680,000 hours of multilingual
+            audio. The foundation of ppcaptions transcription.</p>
+        </div>
+
+        <!-- WhisperX -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">⚡</div>
+            <div>
+              <h3 class="font-semibold text-white">WhisperX</h3>
+              <span class="text-xs text-gray-500">m-bain (ppcaptions fork)</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Accelerated Whisper fork with forced word-level alignment and VAD (voice
+            activity detection) support. Default transcription engine.</p>
+        </div>
+
+        <!-- FFmpeg -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">🎞</div>
+            <div>
+              <h3 class="font-semibold text-white">FFmpeg</h3>
+              <span class="text-xs text-gray-500">FFmpeg Team</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Video and audio processing engine. Handles subtitle muxing (softsub), hardsub
+            burning, and hardware-accelerated transcoding.</p>
+        </div>
+
+        <!-- yt-dlp -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">📥</div>
+            <div>
+              <h3 class="font-semibold text-white">yt-dlp</h3>
+              <span class="text-xs text-gray-500">yt-dlp team</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Video downloader supporting YouTube, Twitch, Vimeo and thousands of other
+            platforms. Integrated directly into ppcaptions for URL inputs.</p>
+        </div>
+
+        <!-- PyTorch -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">🔥</div>
+            <div>
+              <h3 class="font-semibold text-white">PyTorch</h3>
+              <span class="text-xs text-gray-500">Meta AI</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Deep learning framework that runs the Whisper models. Supports CUDA (NVIDIA),
+            MPS (Apple Silicon), and CPU with automatic detection.</p>
+        </div>
+
+        <!-- Gemini AI -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">✨</div>
+            <div>
+              <h3 class="font-semibold text-white">Gemini AI</h3>
+              <span class="text-xs text-gray-500">Google DeepMind</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Optionally used for high-quality translation and for generating TLTW (Too
+            Long To Watch) summaries with chapters and key points.</p>
+        </div>
+
+        <!-- Silero VAD -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">🎤</div>
+            <div>
+              <h3 class="font-semibold text-white">Silero VAD</h3>
+              <span class="text-xs text-gray-500">Silero</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Default voice activity detector (VAD) used by WhisperX. Strips silences and
+            improves subtitle segmentation automatically.</p>
+        </div>
+
+        <!-- deep_translator -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">🌍</div>
+            <div>
+              <h3 class="font-semibold text-white">deep-translator</h3>
+              <span class="text-xs text-gray-500">nidhaloff</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Python library that abstracts multiple translation APIs. Used to integrate
+            Google Translate with context-aware block chunking.</p>
+        </div>
+
+        <!-- pysrt -->
+        <div class="card-glass rounded-2xl p-6 transition-all duration-300 fade-in">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-xl">📄</div>
+            <div>
+              <h3 class="font-semibold text-white">pysrt</h3>
+              <span class="text-xs text-gray-500">byroot</span>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400"><code class="text-xs text-brand-400">.srt</code> file manipulation: reading,
+            writing, timestamp editing, and intelligent subtitle block segmentation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ INSTALLATION -->
+  <section id="install" class="py-24 px-4">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-12 fade-in">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">Local installation</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">Prefer to run it on your own machine? Choose an installation method.
+        </p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex gap-2 mb-6 fade-in flex-wrap" id="install-tabs">
+        <button
+          class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium transition-all bg-surface-600 hover:bg-surface-500 text-gray-300"
+          data-tab="uv">uv (recommended)</button>
+        <button
+          class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all bg-surface-600 hover:bg-surface-500 text-gray-300"
+          data-tab="pip">pip</button>
+        <button
+          class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all bg-surface-600 hover:bg-surface-500 text-gray-300"
+          data-tab="source">Source code</button>
+        <button
+          class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-all bg-surface-600 hover:bg-surface-500 text-gray-300"
+          data-tab="docker">Docker</button>
+      </div>
+
+      <div class="card-glass rounded-2xl p-6 fade-in">
+        <!-- uv -->
+        <div id="tab-uv" class="tab-content active space-y-4">
+          <p class="text-sm text-gray-400">Install <a href="https://docs.astral.sh/uv/getting-started/installation/"
+              target="_blank" class="text-brand-400 hover:underline">uv</a> and run:</p>
+          <pre
+            class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>uv tool install git+https://github.com/xvictorlopes/ppcaptions.git</code></pre>
+          <p class="text-sm text-gray-400">To upgrade:</p>
+          <pre
+            class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>uv tool upgrade ppcaptions</code></pre>
+          <p class="text-sm text-gray-400">To use:</p>
+          <pre
+            class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>ppcaptions -i /path/to/video.mp4</code></pre>
+        </div>
+
+        <!-- pip -->
+        <div id="tab-pip" class="tab-content space-y-4">
+          <pre
+            class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>pip install ppcaptions</code></pre>
+          <p class="text-sm text-gray-400">Also install FFmpeg for your platform (see the Source code tab). Then run:
+          </p>
+          <pre
+            class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>ppcaptions -i /path/to/video.mp4</code></pre>
+        </div>
+
+        <!-- source -->
+        <div id="tab-source" class="tab-content space-y-4">
+          <p class="text-sm text-gray-400 mb-2">Requirements: Python 3.9–3.12, Git, FFmpeg.</p>
+          <pre class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>git clone https://github.com/xvictorlopes/ppcaptions.git
+cd ppcaptions
+pip install -r requirements.txt --upgrade</code></pre>
+          <p class="text-sm text-gray-400">To run:</p>
+          <pre
+            class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code>python3 ppcaptions.py -i /path/to/video.mp4</code></pre>
+          <p class="text-xs text-gray-600">Windows: install FFmpeg via <code
+              class="text-brand-500">choco install ffmpeg-full</code>. Linux: <code
+              class="text-brand-500">apt install ffmpeg</code>.</p>
+        </div>
+
+        <!-- docker -->
+        <div id="tab-docker" class="tab-content space-y-4">
+          <pre class="bg-black/50 rounded-xl p-4 text-sm text-brand-300 overflow-x-auto"><code># Build
+docker compose build
+
+# Process a video
+docker compose run --rm ppcaptions -i /data/video.mp4 --translate pt
+
+# With GPU (NVIDIA Container Toolkit required)
+docker compose run --rm --gpus all ppcaptions -i /data/video.mp4</code></pre>
+          <p class="text-xs text-gray-600">Place your files in <code class="text-brand-500">./data</code> or mount a
+            different volume.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ CLI REFERENCE -->
+  <section id="cli" class="py-24 px-4 bg-surface-800/30">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-12 fade-in">
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">CLI Reference</h2>
+        <p class="text-gray-400 max-w-xl mx-auto">All available options in the PU Prime Captions CLI.</p>
+      </div>
+
+      <div class="mb-4 fade-in">
+        <div class="bg-black/50 rounded-xl px-4 py-3 font-mono text-brand-300 text-sm overflow-x-auto">
+          ppcaptions -i [input_path] [options]
+        </div>
+      </div>
+
+      <div class="space-y-3 fade-in" id="accordion">
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code class="text-brand-400 text-sm">-i, --input_path</code> <span
+                class="text-gray-500 text-sm font-normal">Input</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Path to a media folder, single file, or URL (YouTube, etc.). When a
+              URL is provided, yt-dlp downloads the content before processing.<br /><br />
+              <code class="text-xs text-brand-400">ppcaptions -i /videos/</code><br />
+              <code class="text-xs text-brand-400">ppcaptions -i https://www.youtube.com/watch?v=…</code>
+            </p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code
+                class="text-brand-400 text-sm">-ts:e, --transcription_engine</code> <span
+                class="text-gray-500 text-sm font-normal">Engine</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Transcription engine. <code class="text-brand-400">whisperx</code>
+              (default) or <code class="text-brand-400">whisper</code>. WhisperX is faster and aligns words
+              individually.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code
+                class="text-brand-400 text-sm">-ts:m, --transcription_model</code> <span
+                class="text-gray-500 text-sm font-normal">Whisper model</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Name or path of the Whisper model. Default: <code
+                class="text-brand-400">large-v3-turbo</code>.<br />Options: <code
+                class="text-brand-400">tiny, small, medium, large, large-v3, turbo, large-v3-turbo, distil-large-v2, distil-large-v3</code>,
+              and others.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code
+                class="text-brand-400 text-sm">-ts:d, --transcription_device</code> <span
+                class="text-gray-500 text-sm font-normal">Device</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Execution device: <code class="text-brand-400">auto</code> (default),
+              <code class="text-brand-400">cpu</code>, <code class="text-brand-400">cuda</code>. In <em>auto</em> mode,
+              prefers CUDA &gt; MPS &gt; CPU.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code class="text-brand-400 text-sm">--translate</code> <span
+                class="text-gray-500 text-sm font-normal">Translation</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Target language code. If the same as the source language, translation
+              is skipped.<br />
+              <code class="text-xs text-brand-400">ppcaptions -i /videos/ --translate pt-BR</code><br />
+              <code class="text-xs text-brand-400">ppcaptions -i /videos/ --translate fr</code>
+            </p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code class="text-brand-400 text-sm">--translate_engine</code> <span
+                class="text-gray-500 text-sm font-normal">Translation engine</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4"><code class="text-brand-400">google</code> (default) or <code
+                class="text-brand-400">gemini</code>. With Gemini, provide the key via <code
+                class="text-brand-400">--gemini_api_key</code>. Multiple keys can be supplied for quota rotation.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code class="text-brand-400 text-sm">--tltw</code> <span
+                class="text-gray-500 text-sm font-normal">TLTW summary</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Enables "Too Long To Watch" summary generation with Gemini. Requires
+              <code class="text-brand-400">--gemini_api_key</code>. Outputs a Markdown file with title, tags, key
+              points, and timestamped chapters.<br />
+              Use <code class="text-brand-400">--output_tltw</code> to set the output folder for summaries.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code class="text-brand-400 text-sm">-c:v / -c:a</code> <span
+                class="text-gray-500 text-sm font-normal">Video / audio codecs</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">
+              Default video: <code class="text-brand-400">h264</code>. With hardware acceleration: <code
+                class="text-brand-400">h264_nvenc</code>, <code class="text-brand-400">h264_vaapi</code>, <code
+                class="text-brand-400">hevc_nvenc</code>, etc.<br />
+              Default audio: <code class="text-brand-400">aac</code>. Options: <code
+                class="text-brand-400">libopus, libmp3lame, pcm_s16le</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code
+                class="text-brand-400 text-sm">--disable_softsubs / --disable_hardsubs</code> <span
+                class="text-gray-500 text-sm font-normal">Output control</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Disables softsub generation (subtitle track in the MP4 container) or
+              hardsub generation (burned-in captions). Both are enabled by default.<br />
+              Use <code class="text-brand-400">--subtitle_formats srt,txt</code> to control which subtitle file formats
+              are exported.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item card-glass rounded-xl overflow-hidden">
+          <button
+            class="accordion-trigger w-full text-left px-5 py-4 flex items-center justify-between font-medium text-gray-200 hover:text-white transition-colors">
+            <span class="flex items-center gap-3"><code class="text-brand-400 text-sm">--process_input_subs</code> <span
+                class="text-gray-500 text-sm font-normal">Process existing .srt files</span></span>
+            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 accordion-icon" fill="none"
+              stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="accordion-body px-5 pb-0">
+            <p class="text-sm text-gray-400 pb-4">Processes <code class="text-brand-400">.srt</code> files found in the
+              input folder (translation / TLTW) without re-transcribing the audio. If a <code
+                class="text-brand-400">.srt</code> has the same name as a video, it will be used instead of
+              transcription.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ FOOTER -->
+  <footer class="py-12 px-4 border-t border-brand-900/40">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid sm:grid-cols-3 gap-8 mb-10">
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-brand-400 font-mono font-bold text-lg">PU Prime</span><span
+              class="text-white font-bold text-lg">Captions</span>
+          </div>
+          <p class="text-sm text-gray-500">Open-source AI subtitle studio. Licensed under GPLv3.</p>
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-gray-300 mb-3">Links</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="https://github.com/xvictorlopes/ppcaptions" target="_blank"
+                class="hover:text-brand-400 transition-colors">GitHub</a></li>
+            <li><a
+                href="https://colab.research.google.com/github/xvictorlopes/ppcaptions/blob/main/ppcaptions.ipynb"
+                target="_blank" class="hover:text-brand-400 transition-colors">Google Colab</a></li>
+            <li><a href="https://github.com/xvictorlopes/ppcaptions/issues/new" target="_blank"
+                class="hover:text-brand-400 transition-colors">Report an issue</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-gray-300 mb-3">Community</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="https://choosealicense.com/licenses/gpl-3.0/" target="_blank"
+                class="hover:text-brand-400 transition-colors">GPLv3 License</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="pt-6 border-t border-surface-700/40 text-center text-xs text-gray-600">
+        PU Prime Captions — open-source under GPLv3. Built with Whisper, WhisperX, FFmpeg and yt-dlp.
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================ JS -->
+  <script>
+    // Mobile menu
+    document.getElementById('menu-btn').addEventListener('click', () => {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    // Accordion
+    document.querySelectorAll('.accordion-trigger').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const body = btn.nextElementSibling;
+        const icon = btn.querySelector('.accordion-icon');
+        const isOpen = body.classList.contains('open');
+
+        // Close all
+        document.querySelectorAll('.accordion-body').forEach(b => b.classList.remove('open'));
+        document.querySelectorAll('.accordion-icon').forEach(i => i.style.transform = '');
+
+        if (!isOpen) {
+          body.classList.add('open');
+          icon.style.transform = 'rotate(180deg)';
+        }
+      });
+    });
+
+    // Install tabs
+    document.querySelectorAll('#install-tabs .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+      });
+    });
+
+    // Fade-in on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // Close mobile menu on nav link click
+    document.querySelectorAll('#mobile-menu a').forEach(a => {
+      a.addEventListener('click', () => {
+        document.getElementById('mobile-menu').classList.add('hidden');
+      });
+    });
+  </script>
+</body>
+
+</html>
