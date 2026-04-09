@@ -10,4 +10,4 @@ vidqa
 gemini-srt-translator
 google-generativeai
 yt-dlp
-git+https://github.com/xvictorlopes/whisperx-ppcaptions-fork.git
+whisperx

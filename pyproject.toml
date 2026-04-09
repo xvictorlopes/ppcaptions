@@ -39,7 +39,7 @@ dependencies = [
     "gemini-srt-translator",
     "google-generativeai",
     "yt-dlp",
-    "whisperx-ppcaptions-fork @ git+https://github.com/xvictorlopes/whisperx-ppcaptions-fork.git"
+    "whisperx"
 ]
 
 [project.optional-dependencies]

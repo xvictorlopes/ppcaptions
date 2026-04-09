@@ -9,7 +9,7 @@ from utils import time_task
 
 
 def transcribe_audio(model: whisper.model, audio_path: Path, srt_path: Path, lang: str = None, disable_fp16: bool = False):
-    from whisperx_ppcaptions_fork import alignment
+    from whisperx import alignment
 
     # Load audio
     audio = whisper.load_audio(file=audio_path.as_posix())
