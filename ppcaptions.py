@@ -91,12 +91,12 @@ red = "\033[1;31m"
 
 def _print_banner() -> None:
     banner = f"""
-{blue}  _____  _    _  {gray} _____      _                
-{blue} |  __ \| |  | | {gray}|  __ \    (_)               
-{blue} | |__) | |  | | {gray}| |__) | __ _ _ __ ___   ___ 
-{blue} |  ___/| |  | | {gray}|  ___/ '__| | '_ ` _ \ / _ \
-{blue} | |    | |__| | {gray}| |   | |  | | | | | | |  __/
-{blue} |_|     \____/  {gray}|_|   |_|  |_|_| |_| |_|\___|
+{blue}  _____  _    _   _____      _                
+{blue} |  __ \| |  | | |  __ \    (_)               
+{blue} | |__) | |  | | | |__) | __ _ _ __ ___   ___ 
+{blue} |  ___/| |  | | |  ___/ '__| | '_ ` _ \ / _ \ 
+{blue} | |    | |__| | | |   | |  | | | | | | |  __/
+{blue} |_|     \____/  |_|   |_|  |_|_| |_| |_|\___|
                                               
 PU Prime Captions {version} - github.com/xvictorlopes/ppcaptions{default}
 python {sys.version}
